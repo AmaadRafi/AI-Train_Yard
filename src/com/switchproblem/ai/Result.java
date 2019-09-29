@@ -17,4 +17,9 @@ public class Outcome {
         this.actionTaken = null;
         this.resultState = null;
     }
+
+    @Override
+    public String toString() {
+        return "" + resultState;
+    }
 }
