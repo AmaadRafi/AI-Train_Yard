@@ -1,5 +1,6 @@
 package com.switchproblem.ai;
 
+
 import java.util.*;
 
 // go list of possible actions, do results next or store that list into something global?
@@ -7,7 +8,40 @@ import java.util.*;
 public class Main {
 
     public static void main(String[] args) {
-        testYard3();
+        int input = -1;
+        Scanner ui = new Scanner(System.in);
+
+        while(input != 6) {
+            System.out.println("\n1. Test Yard 1");
+            System.out.println("2. Test Yard 2");
+            System.out.println("3. Test Yard 3");
+            System.out.println("4. Test Yard 4");
+            System.out.println("5. Test Yard 5");
+            System.out.println("6. Exit");
+            System.out.printf("Input : ");
+
+            try{
+                input = ui.nextInt();
+            }catch (InputMismatchException e) {
+                System.out.println("Invalid input");
+                ui.next();
+            }
+
+
+            switch (input){
+                case 1: testYard1(); break;
+                case 2: testYard2(); break;
+                case 3: testYard3(); break;
+                case 4: testYard4(); break;
+                case 5: testYard5(); break;
+                case 6:
+                    System.out.println("Exiting...");
+                    break;
+                default:
+                    System.out.println("Invalid input");
+                    break;
+            }
+        }
     }
 
     /**
@@ -24,23 +58,16 @@ public class Main {
         for (List<Integer> sublist : yard) {
             if (sublist.contains(engineTrack)) {
                 // Move left most element of right track to right most of left track
-                actions.add(new Action("LEFT", sublist.get(1), sublist.get(0)));
+                actions.add(new Action("L", sublist.get(1), sublist.get(0)));
                 // Move right most element of left track to left most element of right track
-                actions.add(new Action("RIGHT", sublist.get(0), sublist.get(1)));
+                actions.add(new Action("R", sublist.get(0), sublist.get(1)));
             }
         }
-        Collections.sort(actions, (action1, action2) -> (action1.direction).compareTo(action2.direction));
+        // Collections.sort(actions, (action1, action2) -> (action1.direction).compareTo(action2.direction));
         return actions;
     }
 
-    /**
-     * Problem 2 - consumes an Action and a State and produces the new State that
-     * will result after actually carrying out the input move in the input state
-     *
-     * @param action - object of Action that contains (string direction, int from, int to)
-     * @param state  - current position of trains
-     * @return
-     */
+
 //    private static List<String> result(Action action, List<String> state) {
 //        List<String> result = new ArrayList<>(state);
 //
@@ -73,21 +100,29 @@ public class Main {
 //            result.set(fromTrack, rightTrack);
 //            //System.out.println("final track L = " + result);
 //        }
-    private static Outcome result(Action action, List<String> state) {
-        List<String> result = new ArrayList<>(state);
-        Outcome out = new Outcome();
+
+    /**
+     * Problem 2 - consumes an Action and a State and produces the new State that
+     *             will result after actually carrying out the input move in the input state
+     *
+     * @param action - object of Action that contains (string direction, int from, int to)
+     * @param state  - current position of cars
+     * @return result - a Result object that stores the next state and action taken to get to it
+     */
+    private static Result result(Action action, List<String> state) {
+        Result result = new Result();
+        List<String> carState = new ArrayList<>(state);
 
         int fromTrack = action.fromTrack - 1;
         int toTrack = action.toTrack - 1;
-        ;
+
         String fromString = state.get(fromTrack);
         String toString = state.get(toTrack);
 
-        // System.out.println("CLONE = " + result);
-        if (action.direction.equals("LEFT")) {
-            // System.out.println("Action = LEFT From = " + action.fromTrack + " To = " + action.toTrack);
+        // move car from left track to right track
+        if (action.direction.equals("L")) {
             String leftTrack, rightTrack;
-            // move FROM right TO left
+
             if (!fromString.isEmpty()) {
                 leftTrack = toString + fromString.charAt(0);
                 rightTrack = removeCharAt(fromString, 0);
@@ -96,23 +131,17 @@ public class Main {
                 rightTrack = fromString;
             }
 
-//            // delete w.e we moved from right track
-//            if(!toString.isEmpty())
-//                rightTrack = removeCharAt(fromString, 0);
-//            else
-//                rightTrack = fromString;
-
-            result.set(toTrack, leftTrack);
-            result.set(fromTrack, rightTrack);
-            out.actionTaken = action;
-            out.resultState = result;
-            //System.out.println("final track L = " + result);
+            carState.set(toTrack, leftTrack);
+            carState.set(fromTrack, rightTrack);
+            result.prevState = state;
+            result.actionTaken = action;
+            result.resultState = carState;
         }
 
-        if (action.direction.equals("RIGHT")) {
-            //System.out.println("Action = RIGHT From = " + action.fromTrack + " To = " + action.toTrack);
-            // move FROM left TO right
+        // move car from right track to left track
+        if (action.direction.equals("R")) {
             String rightTrack, leftTrack;
+
             if (!fromString.isEmpty()) {
                 rightTrack = fromString.charAt(fromString.length() - 1) + toString;
                 leftTrack = removeCharAt(fromString, fromString.length() - 1);
@@ -121,44 +150,44 @@ public class Main {
                 leftTrack = fromString;
             }
 
-            result.set(toTrack, rightTrack);
-            result.set(fromTrack, leftTrack);
-
-            out.actionTaken = action;
-            out.resultState = result;
+            carState.set(toTrack, rightTrack);
+            carState.set(fromTrack, leftTrack);
+            result.actionTaken = action;
+            result.resultState = carState;
         }
 
-        return out;
+        return result;
     }
 
     /**
      * Problem 3 - consumes a State and a Yard, and produces a list of all states that
-     * can be reached in one Action from the given state
+     *             can be reached in one Action from the given state
      *
      * @param yard  - list of sublist's (connectivity list)
      * @param state - current position of trains
-     * @return possibleStates - list of all possible states from this action
+     * @return possibleResults - list of all possible outcomes from give state and yard
      */
-    private static List<Outcome> expand(List<List<Integer>> yard, List<String> state) {
+    private static List<Result> expand(List<List<Integer>> yard, List<String> state) {
         //List<List<String>> possibleStates = new ArrayList<>();
-        List<Outcome> possibleOutcomes = new ArrayList<>();
+        List<Result> possibleResults = new ArrayList<>();
 
         List<Action> actions = possibleActions(yard, state);
 
         for (Action action : actions)
             if (!result(action, state).equals(state)) {
-                Outcome possibleOutcome = new Outcome(result(action, state).actionTaken, result(action, state).resultState);
+                Result possibleResult = new Result(result(action, state).actionTaken, result(action, state).resultState);
+                possibleResults.add(possibleResult);
                 //possibleStates.add(result(action, state).resultState);
-                possibleOutcomes.add(possibleOutcome);
+
             }
 
-        return possibleOutcomes;
+        return possibleResults;
     }
 
     /**
      * Problem 4 - consumes a connectivity list (Yard), an initial State, and a goal State as
-     * inputs, and produces a list of Actions that will take the cars in the initial state into the goal
-     * state.
+     *             inputs, and produces a list of Actions that will take the cars in the initial state into the goal
+     *             state.
      *
      * @param yard         - list of sublist's (connectivity list)
      * @param initialState - List of string we start with
@@ -171,37 +200,43 @@ public class Main {
         if (initialState.equals(goalState))
             return actionsToGoal;
 
-        // queue of states + set of seen states
-        Queue<Outcome> q = new LinkedList<>();
-        Set<List<String>> seen = new HashSet<>();
+        // queue of states + set of visited states
+        Queue<Result> q = new LinkedList<>();
+        Set<List<String>> visited = new HashSet<>();
 
-        q.add(new Outcome(null, initialState));
+        q.add(new Result(initialState));
 
         while (!q.isEmpty()) {
             int currentLevelSize = q.size();
 
             for (int i = 0; i < currentLevelSize; i++) {
-                Outcome currentNode = q.poll();
-
-                System.out.println("Current state : " + currentNode.resultState);
+                Result currentNode = q.poll();
+                currentNode.path_cost = currentNode.calculateCost(currentNode.resultState, goalState);
+                System.out.println("Step taken : " + currentNode.actionTaken + "\tCurrent state : " + currentNode.resultState + "\tCost : " + currentNode.path_cost);
 
                 if (currentNode.actionTaken != null)
                     actionsToGoal.add(currentNode.actionTaken);
 
-                if (currentNode.resultState.equals(goalState))
+                if (currentNode.resultState.equals(goalState)) {
+                    System.out.println("Steps needed to reach goal : " +actionsToGoal.size());
                     return actionsToGoal;
+                }
 
-                List<Outcome> possibleNodes = expand(yard, currentNode.resultState);
+                List<Result> possibleNodes = expand(yard, currentNode.resultState);
 
-                for (Outcome node : possibleNodes) {
-                    if (!seen.contains(node.resultState))
+                for (Result node : possibleNodes) {
+                    if (!visited.contains(node.resultState))
                         q.add(node);
-                        seen.add(node.resultState);
+                        visited.add(node.resultState);
                 }
             }
 
         }
 
+        System.out.println("Goal not reachable.");
+        System.out.println("Visisted Nodes: " + visited.size());
+        System.out.println("BFS counter = "  + actionsToGoal.size());
+        System.out.println(visited);
         return actionsToGoal;
     }
 
@@ -387,6 +422,8 @@ public class Main {
         System.out.println("Possible actions : " + actions.toString());
         System.out.println("Possible next states : " + expand(yard, initState));
         System.out.println("BFS : " + bfs(yard, initState, goalState));
+        //bfs(yard, initState, goalState);
+
     }
 
 
